@@ -1,6 +1,6 @@
 [package]
 name = "cargo-review-deps"
-version = "1.0.0-pre.2"
+version = "1.0.0"
 authors = ["Aleksey Kladov <aleksey.kladov@ferrous-systems.com>"]
 description = "A cargo subcommand for reviewing the source code of crates.io dependencies"
 repository = "https://github.com/ferrous-systems/cargo-review-deps"
