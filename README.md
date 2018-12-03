@@ -45,6 +45,10 @@ diff of *all* dependencies changed during `cargo update`.
 dependencies with security vulnerabilities reported to the RustSec Advisory
 Database.
 
+## Commercial Support
+
+This project is developed by [Ferrous Systems GmbH](https://ferrous-systems.com). Interested in commercial support, custom functionality, or sponsoring this open source work? Send us [an email here](mailto:commercial@ferrous-systems.com).
+
 ## License
 
 `MIT OR Apache-2.0`
