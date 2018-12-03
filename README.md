@@ -44,3 +44,7 @@ diff of *all* dependencies changed during `cargo update`.
 [cargo-audit](https://github.com/RustSec/cargo-audit) checks your project for
 dependencies with security vulnerabilities reported to the RustSec Advisory
 Database.
+
+## License
+
+`MIT OR Apache-2.0`
