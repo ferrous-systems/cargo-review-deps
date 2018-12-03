@@ -69,14 +69,29 @@ impl Diff {
             copy_dir(&second_src, &dir.join(self.second.to_string()))?;
         } else {
             let mut diff_cmd = Command::new("diff");
-            diff_cmd
+            let diff_status = diff_cmd
                 .args(&["--color=auto", "-r"])
                 .arg(&first_src)
                 .arg(&second_src)
                 .stdout(Stdio::inherit())
-                .status()?;
+                .stderr(Stdio::inherit())
+                .status();
+            if diff_status.is_err() {
+                if !has_diff_cmd() {
+                    bail!("looks like you don't have a suitable diff command installed.\n\
+                           Try using --destination flag to run a custom diff tool or to compare sources manually.")
+                }
+            }
+            diff_status?;
         }
         Ok(())
+    }
+}
+
+fn has_diff_cmd() -> bool {
+    match Command::new("diff").arg("--version").status() {
+        Err(_) => false,
+        Ok(status) => status.success()
     }
 }
 
