@@ -56,14 +56,14 @@ impl FromStr for PackageId {
 pub struct Diff {
     pub first: PackageId,
     pub second: PackageId,
-    pub copy_to: Option<PathBuf>,
+    pub dest: Option<PathBuf>,
 }
 
 impl Diff {
     pub fn run(self) -> Result<()> {
         let first_src = fetch(&self.first)?;
         let second_src = fetch(&self.second)?;
-        if let Some(dir) = self.copy_to {
+        if let Some(dir) = self.dest {
             fs::create_dir_all(&dir)?;
             copy_dir(&first_src, &dir.join(self.first.to_string()))?;
             copy_dir(&second_src, &dir.join(self.second.to_string()))?;

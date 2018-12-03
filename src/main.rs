@@ -1,36 +1,86 @@
-extern crate cargo_diff;
-extern crate structopt;
+extern crate cargo_review_deps;
+extern crate clap;
 
 use std::path::PathBuf;
 
-use cargo_diff::{Diff, PackageId, Result};
-use structopt::StructOpt;
+use cargo_review_deps::{Diff, PackageId, Result};
+use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 
-/// Compares two published versions of a crate.
-#[derive(StructOpt, Debug)]
-#[structopt(name = "cargo-diff")]
-struct Opt {
-    /// First package to compare, in the form of name:version, for example
-    /// regex:1.0.0.
-    #[structopt(name = "FIRST_PACKAGE_ID")]
-    first: PackageId,
-    /// Second package to compare, in the form of name:version, for example
-    /// regex:1.1.2.
-    #[structopt(name = "SECOND_PACKAGE_ID")]
-    second: PackageId,
-    /// If specified, will copy the sources of the packages to the specified dir
-    /// instead of running the diff command.
-    #[structopt(long = "copy-to", name = "DIR", parse(from_os_str))]
-    copy_to: Option<PathBuf>,
+fn main() {
+    let exit_code = main_inner();
+    std::process::exit(exit_code);
 }
 
-fn main() -> Result<()> {
-    let opt = Opt::from_args();
-    let diff = Diff {
-        first: opt.first,
-        second: opt.second,
-        copy_to: opt.copy_to,
+fn main_inner() -> i32 {
+    let matches = App::new("cargo-review-deps")
+        .bin_name("cargo")
+        .version("1.0")
+        .settings(&[AppSettings::GlobalVersion, AppSettings::SubcommandRequired])
+        .subcommand(
+            SubCommand::with_name("review-deps")
+                .author("Aleksey Kladov <aleksey.kladov@ferrous-systems.com>")
+                .about("Helps you to review source code of your crates.io dependencies")
+                .setting(AppSettings::SubcommandRequired)
+                .subcommand(
+                    SubCommand::with_name("diff")
+                        .about("Show the diff between two crate versions")
+                        .after_help("By default, diff -r command is used for diffing. \
+                               If you want to use a custom diff tool, specify the --destination \
+                               argument and run the diff command manually.")
+                        .arg(
+                            Arg::with_name("FIRST_PACKAGE_ID")
+                                .required(true)
+                                .index(1)
+                                .help("First crate to diff, in the form of name:version, for example rand:0.6.0"),
+                        )
+                        .arg(
+                            Arg::with_name("SECOND_PACKAGE_ID")
+                                .required(true)
+                                .index(2)
+                                .help("Second crate to diff, for example rand:0.6.1"),
+                        )
+                        .arg(
+                            Arg::with_name("destination")
+                                .short("d")
+                                .long("destination")
+                                .takes_value(true)
+                                .value_name("DIR")
+                                .help("Checkout sources of the two versions to the specified directory")
+                        ),
+                ),
+        ).get_matches();
+
+    let matches = matches.subcommand_matches("review-deps").unwrap(); // Cargo always calls us using `cargo review-deps ...` as `argv`
+    let (cmd, matches) = match matches.subcommand() {
+        (cmd, Some(matches)) => (cmd, matches),
+        (_, None) => unreachable!("AppSettings::SubcommandRequired is set"),
     };
-    diff.run()?;
-    Ok(())
+
+    let res = match cmd {
+        "diff" => exec_diff(&matches),
+        _ => unreachable!("no such cmd: {:?}", cmd),
+    };
+
+    if let Err(err) = res {
+        eprintln!("error: {}", err);
+        return 101;
+    }
+    0
+}
+
+fn value_of_pkg_id(matches: &ArgMatches, arg_name: &str) -> Result<PackageId> {
+    let value = matches.value_of(arg_name).expect("arg is required");
+    value.parse()
+}
+
+fn exec_diff(matches: &ArgMatches) -> Result<()> {
+    let first = value_of_pkg_id(&matches, "FIRST_PACKAGE_ID")?;
+    let second = value_of_pkg_id(&matches, "SECOND_PACKAGE_ID")?;
+    let dest = matches.value_of("destination").map(PathBuf::from);
+    let diff = Diff {
+        first,
+        second,
+        dest,
+    };
+    diff.run()
 }
