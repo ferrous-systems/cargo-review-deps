@@ -70,7 +70,7 @@ impl Diff {
         } else {
             let mut diff_cmd = Command::new("diff");
             diff_cmd
-                .arg("-r")
+                .args(&["--color=auto", "-r"])
                 .arg(&first_src)
                 .arg(&second_src)
                 .stdout(Stdio::inherit())
