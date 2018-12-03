@@ -2,13 +2,13 @@
 
 A cargo subcommand for reviewing the source code of crates.io dependencies.
 
-Installation:
+## Installation:
 
 ```
 cargo install cargo-review-deps
 ```
 
-Usage:
+## Usage:
 
 To see the `diff -r` of packages, use
 
@@ -30,3 +30,17 @@ contain the sources of the respective versions.
 Note that `cargo-review-deps` does not rely on version control information: it
 uses exactly that version of source code, that will be used by Cargo to build
 your project.
+
+## Future plans:
+
+`cargo review-deps current -d my-deps` to dump the sources of all dependencies
+to `my-deps` directory.
+
+`cargo review-deps diff-update -d diff -- -p rand --precise 0.6.1` to get the
+diff of *all* dependencies changed during `cargo update`.
+
+## Similar projects:
+
+[cargo-audit](https://github.com/RustSec/cargo-audit) checks your project for
+dependencies with security vulnerabilities reported to the RustSec Advisory
+Database.
