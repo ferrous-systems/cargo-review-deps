@@ -7,7 +7,7 @@ extern crate tempdir;
 
 use std::{
     fmt, fs,
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::{Command, Stdio},
     str::FromStr,
 };
@@ -99,6 +99,20 @@ impl Current {
     }
 }
 
+struct Metadata<'a> {
+    manifest_path: Option<&'a Path>,
+}
+
+impl<'a> Metadata<'a> {
+    fn run(self) -> Result<cargo_metadata::Metadata> {
+        let metadata = cargo_metadata::metadata_deps(
+            self.manifest_path,
+            true, // include dependencies
+        ).map_err(|err| format_err!("cargo metadata failed: {}", err))?; // error_chain is not sync :-(
+        Ok(metadata)
+    }
+}
+
 fn has_diff_cmd() -> bool {
     match Command::new("diff").arg("--version").status() {
         Err(_) => false,
@@ -112,11 +126,9 @@ fn fetch(pkg_id: &PackageId) -> Result<PathBuf> {
     let dir = TempDir::new("cargo-diff-fetches")?;
     let temp_manifest = dir.path().join("Cargo.toml");
     fs::write(&temp_manifest, format_cargo_toml(pkg_id))?;
-
-    let metadata = cargo_metadata::metadata_deps(
-        Some(&temp_manifest),
-        true, // include dependencies
-    ).map_err(|err| format_err!("cargo metadata failed: {}", err))?; // error_chain is not sync :-(
+    let metadata = Metadata {
+        manifest_path: Some(temp_manifest.as_path()),
+    }.run()?;
 
     let package = metadata
         .packages

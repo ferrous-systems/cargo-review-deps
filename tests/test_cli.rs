@@ -1,7 +1,7 @@
 extern crate assert_cli;
 extern crate tempdir;
 
-use std::{fs, env, path::PathBuf};
+use std::{env, fs, path::PathBuf};
 
 use assert_cli::Assert;
 
@@ -50,7 +50,9 @@ fn current_reports_deps() -> std::io::Result<()> {
     let project_dir = tempdir::TempDir::new("temp-project")?;
     let dest = project_dir.path().join("dest");
 
-    fs::write(project_dir.path().join("Cargo.toml"), r#"
+    fs::write(
+        project_dir.path().join("Cargo.toml"),
+        r#"
         [package]
         name = "test"
         version = "0.0.0"
@@ -60,7 +62,8 @@ fn current_reports_deps() -> std::io::Result<()> {
 
         [lib]
         path = "./Cargo.toml"
-    "#)?;
+    "#,
+    )?;
     cmd_current()
         .current_dir(project_dir.path())
         .with_args(&["--destination"])
