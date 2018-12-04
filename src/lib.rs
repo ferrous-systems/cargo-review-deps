@@ -88,10 +88,21 @@ impl Diff {
     }
 }
 
+#[derive(Debug)]
+pub struct Current {
+    pub dest: Option<PathBuf>,
+}
+
+impl Current {
+    pub fn run(self) -> Result<()> {
+        Ok(())
+    }
+}
+
 fn has_diff_cmd() -> bool {
     match Command::new("diff").arg("--version").status() {
         Err(_) => false,
-        Ok(status) => status.success()
+        Ok(status) => status.success(),
     }
 }
 
