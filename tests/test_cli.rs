@@ -1,7 +1,7 @@
 extern crate assert_cli;
 extern crate tempdir;
 
-use std::{env, path::PathBuf};
+use std::{fs, env, path::PathBuf};
 
 use assert_cli::Assert;
 
@@ -47,10 +47,24 @@ fn diff_copies_sources_to_dest() {
 
 #[test]
 fn current_reports_deps() -> std::io::Result<()> {
-    let dir = tempdir::TempDir::new("diff-tests").unwrap();
+    let project_dir = tempdir::TempDir::new("temp-project")?;
+    let dest = project_dir.path().join("dest");
+
+    fs::write(project_dir.path().join("Cargo.toml"), r#"
+        [package]
+        name = "test"
+        version = "0.0.0"
+
+        [dependencies]
+        thread_local = "=0.3.6"
+
+        [lib]
+        path = "./Cargo.toml"
+    "#)?;
     cmd_current()
+        .current_dir(project_dir.path())
         .with_args(&["--destination"])
-        .with_args(&[&dir.path()])
+        .with_args(&[&dest.as_path()])
         .unwrap();
     Ok(())
 }
