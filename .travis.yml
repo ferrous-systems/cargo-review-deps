@@ -1,0 +1,14 @@
+dist: xenial
+cache: cargo
+before_cache:
+  - find ./target/debug -type f -maxdepth 1 -delete
+  - rm -fr ./target/debug/{deps,.fingerprint}/{*_review_*,*test*}
+  - rm -f  ./target/.rustc_info.json
+
+env:
+  - CARGO_INCREMENTAL=0
+
+language: rust
+rust: stable
+script:
+    - cargo test
