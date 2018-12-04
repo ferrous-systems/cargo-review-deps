@@ -1,14 +1,38 @@
 extern crate assert_cli;
 extern crate tempdir;
 
+use std::{env, path::PathBuf};
+
 use assert_cli::Assert;
 
+// Adapted from
+// https://github.com/rust-lang/cargo/blob/485670b3983b52289a2f353d589c57fae2f60f82/tests/testsuite/support/mod.rs#L507
+fn target_dir() -> PathBuf {
+    env::current_exe()
+        .ok()
+        .map(|mut path| {
+            path.pop();
+            if path.ends_with("deps") {
+                path.pop();
+            }
+            path
+        }).unwrap()
+}
+
+fn cargo_review_deps_exe() -> PathBuf {
+    target_dir().join(format!("cargo-review-deps{}", env::consts::EXE_SUFFIX))
+}
+
+fn base_cmd() -> Assert {
+    Assert::command(&[&cargo_review_deps_exe()]).with_args(&["review-deps"])
+}
+
 fn cmd_diff() -> Assert {
-    Assert::main_binary().with_args(&["review-deps", "diff"])
+    base_cmd().with_args(&["diff"])
 }
 
 fn cmd_current() -> Assert {
-    Assert::main_binary().with_args(&["review-deps", "current"])
+    base_cmd().with_args(&["current"])
 }
 
 #[test]
