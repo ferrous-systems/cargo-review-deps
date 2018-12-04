@@ -9,6 +9,17 @@ fn cmd_diff() -> Assert {
 
 #[test]
 fn diff_shows_diff() {
+    match std::process::Command::new("diff")
+        .args(&["--color=auto", "-", "-"])
+        .status()
+    {
+        Ok(s) if s.success() => (),
+        _ => {
+            eprintln!("skipping the test, no recent `diff` command");
+            return;
+        }
+    }
+
     cmd_diff()
         .with_args(&["rand:0.6.0", "rand:0.6.1"])
         .stdout()
