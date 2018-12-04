@@ -3,7 +3,7 @@ extern crate clap;
 
 use std::path::PathBuf;
 
-use cargo_review_deps::{Diff, PackageId, Result};
+use cargo_review_deps::{Current, Diff, PackageId, Result};
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 
 fn main() {
@@ -47,6 +47,19 @@ fn main_inner() -> i32 {
                                 .value_name("DIR")
                                 .help("Checkout sources of the two versions to the specified directory")
                         ),
+                )
+                .subcommand(
+                    SubCommand::with_name("current")
+                        .about("Download source code of all of the dependencies to the specified directory")
+                        .arg(
+                            Arg::with_name("destination")
+                                .short("d")
+                                .long("destination")
+                                .takes_value(true)
+                                .value_name("DIR")
+                                .required(true)
+                                .help("Checkout sources of the two versions to the specified directory")
+                        ),
                 ),
         ).get_matches();
 
@@ -58,6 +71,7 @@ fn main_inner() -> i32 {
 
     let res = match cmd {
         "diff" => exec_diff(&matches),
+        "current" => exec_current(&matches),
         _ => unreachable!("no such cmd: {:?}", cmd),
     };
 
@@ -77,10 +91,14 @@ fn exec_diff(matches: &ArgMatches) -> Result<()> {
     let first = value_of_pkg_id(&matches, "FIRST_PACKAGE_ID")?;
     let second = value_of_pkg_id(&matches, "SECOND_PACKAGE_ID")?;
     let dest = matches.value_of("destination").map(PathBuf::from);
-    let diff = Diff {
+    Diff {
         first,
         second,
         dest,
-    };
-    diff.run()
+    }.run()
+}
+
+fn exec_current(matches: &ArgMatches) -> Result<()> {
+    let dest = matches.value_of("destination").unwrap().into();
+    Current { dest }.run()
 }
