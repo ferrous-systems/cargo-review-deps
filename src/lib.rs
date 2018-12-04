@@ -90,11 +90,30 @@ impl Diff {
 
 #[derive(Debug)]
 pub struct Current {
-    pub dest: Option<PathBuf>,
+    pub dest: PathBuf,
 }
 
 impl Current {
     pub fn run(self) -> Result<()> {
+        let metadata = Metadata {
+            manifest_path: None,
+        }.run()?;
+
+        fs::create_dir_all(&self.dest)?;
+        for pkg in metadata.packages.iter() {
+            // Ideally we should look at the `source`, but that is private.
+            let is_cratesio_dep = pkg.id.contains("crates.io-index");
+            if !is_cratesio_dep {
+                eprintln!(
+                    "Skipping package `{}`: not a crates.io dependency",
+                    pkg.name
+                );
+                continue;
+            }
+            let src = pkg_dir(&pkg)?;
+            let dst = self.dest.join(format!("{}:{}", pkg.name, pkg.version));
+            copy_dir(&src, &dst)?;
+        }
         Ok(())
     }
 }
@@ -135,13 +154,16 @@ fn fetch(pkg_id: &PackageId) -> Result<PathBuf> {
         .iter()
         .find(|it| it.name == pkg_id.name && it.version == pkg_id.version.to_string())
         .ok_or_else(|| format_err!("unexpected error: can't find package {:?}", pkg_id))?;
+    pkg_dir(&package)
+}
 
-    let res = PathBuf::from(&package.manifest_path)
+fn pkg_dir(pkg: &cargo_metadata::Package) -> Result<PathBuf> {
+    let res = PathBuf::from(&pkg.manifest_path)
         .parent()
         .ok_or_else(|| {
             format_err!(
                 "unexpected error: bad manifest path {:?}",
-                package.manifest_path
+                pkg.manifest_path
             )
         })?.to_path_buf();
     Ok(res)

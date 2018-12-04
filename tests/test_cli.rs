@@ -54,7 +54,7 @@ fn current_reports_deps() -> std::io::Result<()> {
         project_dir.path().join("Cargo.toml"),
         r#"
         [package]
-        name = "test"
+        name = "test-pkg"
         version = "0.0.0"
 
         [dependencies]
@@ -68,7 +68,10 @@ fn current_reports_deps() -> std::io::Result<()> {
         .current_dir(project_dir.path())
         .with_args(&["--destination"])
         .with_args(&[&dest.as_path()])
+        .stderr()
+        .contains("Skipping package `test-pkg`")
         .unwrap();
+    assert!(dest.join("thread_local:0.3.6").exists());
     Ok(())
 }
 

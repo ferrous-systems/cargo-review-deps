@@ -91,16 +91,14 @@ fn exec_diff(matches: &ArgMatches) -> Result<()> {
     let first = value_of_pkg_id(&matches, "FIRST_PACKAGE_ID")?;
     let second = value_of_pkg_id(&matches, "SECOND_PACKAGE_ID")?;
     let dest = matches.value_of("destination").map(PathBuf::from);
-    let cmd = Diff {
+    Diff {
         first,
         second,
         dest,
-    };
-    cmd.run()
+    }.run()
 }
 
 fn exec_current(matches: &ArgMatches) -> Result<()> {
-    let dest = matches.value_of("destination").map(PathBuf::from);
-    let cmd = Current { dest };
-    cmd.run()
+    let dest = matches.value_of("destination").unwrap().into();
+    Current { dest }.run()
 }
