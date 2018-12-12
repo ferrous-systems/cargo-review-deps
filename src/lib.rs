@@ -6,6 +6,7 @@ extern crate semver;
 extern crate tempdir;
 
 use std::{
+    collections::HashMap,
     ffi::OsString,
     fmt, fs,
     path::{Path, PathBuf},
@@ -102,16 +103,7 @@ impl Current {
         .run()?;
 
         fs::create_dir_all(&self.dest)?;
-        for pkg in metadata.packages.iter() {
-            // Ideally we should look at the `source`, but that is private.
-            let is_cratesio_dep = pkg.id.contains("crates.io-index");
-            if !is_cratesio_dep {
-                eprintln!(
-                    "Skipping package `{}`: not a crates.io dependency",
-                    pkg.name
-                );
-                continue;
-            }
+        for pkg in crates_io_packages(&metadata) {
             let src = pkg_dir(&pkg)?;
             let dst = self.dest.join(format!("{}:{}", pkg.name, pkg.version));
             copy_dir(&src, &dst)?;
@@ -150,8 +142,9 @@ impl UpdateDiff {
             manifest_path: None,
         }
         .run()?;
-
-        for pdiff in metadata_diff(&before_metadata, &after_metadata) {
+        fs::create_dir_all(self.dest.join("before"))?;
+        fs::create_dir_all(self.dest.join("after"))?;
+        for pdiff in metadata_diff(&before_metadata, &after_metadata)? {
             pdiff.dump_to(&self.dest)?;
         }
 
@@ -167,27 +160,90 @@ struct PackageDiff {
     after: Option<PathBuf>,
 }
 
-fn metadata_diff(
-    before: &cargo_metadata::Metadata,
-    after: &cargo_metadata::Metadata,
-) -> Vec<PackageDiff> {
-    Vec::new()
-}
-
 impl PackageDiff {
     fn dump_to(&self, dest: &Path) -> Result<()> {
         if let Some(src) = self.before.as_ref() {
             let dst = dest.join("before").join(&self.name);
-            fs::create_dir_all(&dst)?;
             copy_dir(&src, &dst)?;
         }
         if let Some(src) = self.after.as_ref() {
             let dst = dest.join("after").join(&self.name);
-            fs::create_dir_all(&dst)?;
             copy_dir(&src, &dst)?;
         }
         Ok(())
     }
+}
+
+fn metadata_diff(
+    before: &cargo_metadata::Metadata,
+    after: &cargo_metadata::Metadata,
+) -> Result<Vec<PackageDiff>> {
+    let before = extract_packages(before)?;
+    let after = extract_packages(after)?;
+    let mut res = Vec::new();
+    for (name, before_path) in before.iter() {
+        if !after.contains_key(name) {
+            res.push(PackageDiff {
+                name: name.clone(),
+                before: Some(before_path.clone()),
+                after: None,
+            })
+        }
+    }
+    for (name, after_path) in after.iter() {
+        if !before.contains_key(name) {
+            res.push(PackageDiff {
+                name: name.clone(),
+                before: None,
+                after: Some(after_path.clone()),
+            })
+        }
+    }
+    for (name, before_path) in before.iter() {
+        if let Some(after_path) = after.get(name) {
+            if before_path == after_path {
+                continue;
+            }
+            res.push(PackageDiff {
+                name: name.clone(),
+                before: Some(before_path.clone()),
+                after: Some(after_path.clone()),
+            });
+        }
+    }
+
+    Ok(res)
+}
+
+fn extract_packages(meta: &cargo_metadata::Metadata) -> Result<HashMap<String, PathBuf>> {
+    let mut res = HashMap::new();
+    for pkg in crates_io_packages(meta) {
+        let version = Version::parse(&pkg.version)?;
+        let semver_compatible_version = if version.major == 0 {
+            format!("0.{}", version.minor)
+        } else {
+            format!("{}", version.major)
+        };
+        let name = format!("{}:{}", pkg.name, semver_compatible_version);
+        res.insert(name, pkg_dir(pkg)?);
+    }
+    Ok(res)
+}
+
+fn crates_io_packages<'a>(
+    meta: &'a cargo_metadata::Metadata,
+) -> impl Iterator<Item = &'a cargo_metadata::Package> {
+    meta.packages.iter().filter(|pkg| {
+        // Ideally we should look at the `source`, but that is private.
+        let is_cratesio_dep = pkg.id.contains("crates.io-index");
+        if !is_cratesio_dep {
+            eprintln!(
+                "Skipping package `{}`: not a crates.io dependency",
+                pkg.name
+            );
+        }
+        is_cratesio_dep
+    })
 }
 
 /// We run real `cargo update` which writes lockfile. This struct makes sure (in
