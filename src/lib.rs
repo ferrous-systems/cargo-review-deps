@@ -7,6 +7,7 @@ extern crate tempdir;
 
 use std::{
     fmt, fs,
+    ffi::OsString,
     path::{Path, PathBuf},
     process::{Command, Stdio},
     str::FromStr,
@@ -114,6 +115,18 @@ impl Current {
             let dst = self.dest.join(format!("{}:{}", pkg.name, pkg.version));
             copy_dir(&src, &dst)?;
         }
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub struct UpdateDiff {
+    pub dest: PathBuf,
+    pub args: Vec<OsString>,
+}
+
+impl UpdateDiff {
+    pub fn run(self) -> Result<()> {
         Ok(())
     }
 }
