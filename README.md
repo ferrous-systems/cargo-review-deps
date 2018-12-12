@@ -15,14 +15,15 @@ cargo install cargo-review-deps
 To see what exactly changes if you run `cargo-update`, use
 
 ```
-$ cargo review-deps update-diff --destination out -- --package foo
+$ cargo review-deps update-diff -- --package foo
 ```
 
 This will run (without actually updating lockfile) `cargo update --package foo`
-and dump the sources of updated packages to `out/before` and `out/after`.
+and show `diff --color -r` of all added/removed/updated dependencies.
 
-You can then run, for example, `diff --color -r out/before out/after to see the
-exact changes to the sources of your dependencies.
+If you want to use a custom diff tool or need to do a more thorough
+investigation, use `--destination` option to checkout sources of dependencies
+locally.
 
 ### diff
 
@@ -32,9 +33,8 @@ To see quickly the `diff -r` of two package versions, use
 $ cargo review-deps diff rand:0.6.0 rand:0.6.1
 ```
 
-If you want to use a custom diff tool or need to do a more thorough
-investigation, use `--destination` option to checkout sources of dependencies
-locally.
+Similarly to `update-diff`, you can use `--destination` option for customized
+diffing.
 
 ```
 $ cargo review-deps diff rand:0.6.0 rand:0.6.1 --destinations diff

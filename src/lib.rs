@@ -70,24 +70,29 @@ impl Diff {
             copy_dir(&first_src, &dir.join(self.first.to_string()))?;
             copy_dir(&second_src, &dir.join(self.second.to_string()))?;
         } else {
-            let mut diff_cmd = Command::new("diff");
-            let diff_status = diff_cmd
-                .args(&["--color=auto", "-r"])
-                .arg(&first_src)
-                .arg(&second_src)
-                .stdout(Stdio::inherit())
-                .stderr(Stdio::inherit())
-                .status();
-            if diff_status.is_err() {
-                if !has_diff_cmd() {
-                    bail!("looks like you don't have a suitable diff command installed.\n\
-                           Try using --destination flag to run a custom diff tool or to compare sources manually.")
-                }
-            }
-            diff_status?;
+            run_diff_cmd(&first_src, &second_src)?;
         }
         Ok(())
     }
+}
+
+pub fn run_diff_cmd(a: &Path, b: &Path) -> Result<()> {
+    let mut diff_cmd = Command::new("diff");
+    let diff_status = diff_cmd
+        .args(&["--color=auto", "-r"])
+        .arg(a)
+        .arg(b)
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status();
+    if diff_status.is_err() {
+        if !has_diff_cmd() {
+            bail!("looks like you don't have a suitable diff command installed.\n\
+                   Try using --destination flag to run a custom diff tool or to compare sources manually.")
+        }
+    }
+    diff_status?;
+    Ok(())
 }
 
 #[derive(Debug)]
@@ -114,7 +119,7 @@ impl Current {
 
 #[derive(Debug)]
 pub struct UpdateDiff {
-    pub dest: PathBuf,
+    pub dest: Option<PathBuf>,
     pub args: Vec<OsString>,
 }
 
@@ -142,12 +147,25 @@ impl UpdateDiff {
             manifest_path: None,
         }
         .run()?;
-        fs::create_dir_all(self.dest.join("before"))?;
-        fs::create_dir_all(self.dest.join("after"))?;
+        let tmpdir;
+        let dest = match self.dest.as_ref() {
+            Some(it) => it.as_path(),
+            None => {
+                tmpdir = TempDir::new("cargo-diff-fetches")?;
+                tmpdir.path()
+            }
+        };
+        let before_dir = dest.join("before");
+        let after_dir = dest.join("after");
+        fs::create_dir_all(&before_dir)?;
+        fs::create_dir_all(&after_dir)?;
         for pdiff in metadata_diff(&before_metadata, &after_metadata)? {
-            pdiff.dump_to(&self.dest)?;
+            pdiff.dump_to(&dest)?;
         }
 
+        if self.dest.is_none() {
+            run_diff_cmd(&before_dir, &after_dir)?
+        }
         lockfile_guard.restore_lockfile()?;
         Ok(())
     }

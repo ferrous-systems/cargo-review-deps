@@ -50,7 +50,10 @@ fn main_inner() -> i32 {
                 )
                 .subcommand(
                     SubCommand::with_name("current")
-                        .about("Download source code of all of the dependencies to the specified directory")
+                        .about("Show the diff for dependencies after cargo update")
+                        .after_help("By default, diff -r command is used for diffing. \
+                               If you want to use a custom diff tool, specify the --destination \
+                               argument and run the diff command manually.")
                         .arg(
                             Arg::with_name("destination")
                                 .short("d")
@@ -73,7 +76,6 @@ fn main_inner() -> i32 {
                                 .long("destination")
                                 .takes_value(true)
                                 .value_name("DIR")
-                                .required(true)
                                 .help("Checkout sources of dependencies to the specified directory")
                         )
                         .arg(
@@ -127,7 +129,7 @@ fn exec_current(matches: &ArgMatches) -> Result<()> {
 }
 
 fn exec_update_diff(matches: &ArgMatches) -> Result<()> {
-    let dest = matches.value_of("destination").unwrap().into();
+    let dest = matches.value_of("destination").map(PathBuf::from);
     let args = matches
         .values_of_os("args")
         .unwrap_or_default()
