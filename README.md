@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/ferrous-systems/cargo-review-deps.svg?branch=master)](https://travis-ci.com/ferrous-systems/cargo-review-deps)
+
 # cargo-review-deps
 
 A cargo subcommand for reviewing the source code of crates.io dependencies.
