@@ -264,7 +264,7 @@ fn crates_io_packages<'a>(
     })
 }
 
-/// We run real `cargo update` which writes lockfile. This struct makes sure (in
+/// We run real `cargo update` which writes to the lockfile. This struct makes sure (in
 /// Drop), that we restore it propertly afterwards.
 #[derive(Debug)]
 struct LockfileGuard {

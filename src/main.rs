@@ -66,8 +66,8 @@ fn main_inner() -> i32 {
                 )
                 .subcommand(
                     SubCommand::with_name("update-diff")
-                        .about("Download source code of dependencies which would be changed by cargo update to the specified directory")
-                        .after_help("By default, diff -r command is used for diffing. \
+                        .about("Download the source code of dependencies which would be changed by `cargo update` to the specified directory")
+                        .after_help("By default, `diff -r` is the command is used for diffing. \
                                If you want to use a custom diff tool, specify the --destination \
                                argument and run the diff command manually.")
                        .arg(

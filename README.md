@@ -18,7 +18,7 @@ To see what exactly changes if you run `cargo-update`, use
 $ cargo review-deps update-diff -- --package foo
 ```
 
-This will run (without actually updating lockfile) `cargo update --package foo`
+This will run (without actually updating the lockfile) `cargo update --package foo`
 and show `diff --color -r` of all added/removed/updated dependencies.
 
 If you want to use a custom diff tool or need to do a more thorough
@@ -27,7 +27,7 @@ locally.
 
 ### diff
 
-To see quickly the `diff -r` of two package versions, use
+To quickly see the `diff -r` of two package versions, use
 
 ```
 $ cargo review-deps diff rand:0.6.0 rand:0.6.1
