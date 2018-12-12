@@ -1,9 +1,9 @@
 extern crate cargo_review_deps;
 extern crate clap;
 
-use std::path::PathBuf;
+use std::{ffi::OsStr, path::PathBuf};
 
-use cargo_review_deps::{Current, Diff, PackageId, Result};
+use cargo_review_deps::{Current, Diff, PackageId, Result, UpdateDiff};
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 
 fn main() {
@@ -50,7 +50,10 @@ fn main_inner() -> i32 {
                 )
                 .subcommand(
                     SubCommand::with_name("current")
-                        .about("Download source code of all of the dependencies to the specified directory")
+                        .about("Show the diff for dependencies after cargo update")
+                        .after_help("By default, diff -r command is used for diffing. \
+                               If you want to use a custom diff tool, specify the --destination \
+                               argument and run the diff command manually.")
                         .arg(
                             Arg::with_name("destination")
                                 .short("d")
@@ -60,6 +63,26 @@ fn main_inner() -> i32 {
                                 .required(true)
                                 .help("Checkout sources of the two versions to the specified directory")
                         ),
+                )
+                .subcommand(
+                    SubCommand::with_name("update-diff")
+                        .about("Download the source code of dependencies which would be changed by `cargo update` to the specified directory")
+                        .after_help("By default, `diff -r` is the command is used for diffing. \
+                               If you want to use a custom diff tool, specify the --destination \
+                               argument and run the diff command manually.")
+                       .arg(
+                            Arg::with_name("destination")
+                                .short("d")
+                                .long("destination")
+                                .takes_value(true)
+                                .value_name("DIR")
+                                .help("Checkout sources of dependencies to the specified directory")
+                        )
+                        .arg(
+                            Arg::with_name("args")
+                                .last(true)
+                                .multiple(true)
+                        )
                 ),
         ).get_matches();
 
@@ -72,6 +95,7 @@ fn main_inner() -> i32 {
     let res = match cmd {
         "diff" => exec_diff(&matches),
         "current" => exec_current(&matches),
+        "update-diff" => exec_update_diff(&matches),
         _ => unreachable!("no such cmd: {:?}", cmd),
     };
 
@@ -95,10 +119,21 @@ fn exec_diff(matches: &ArgMatches) -> Result<()> {
         first,
         second,
         dest,
-    }.run()
+    }
+    .run()
 }
 
 fn exec_current(matches: &ArgMatches) -> Result<()> {
     let dest = matches.value_of("destination").unwrap().into();
     Current { dest }.run()
+}
+
+fn exec_update_diff(matches: &ArgMatches) -> Result<()> {
+    let dest = matches.value_of("destination").map(PathBuf::from);
+    let args = matches
+        .values_of_os("args")
+        .unwrap_or_default()
+        .map(OsStr::to_owned)
+        .collect();
+    UpdateDiff { dest, args }.run()
 }

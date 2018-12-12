@@ -8,17 +8,33 @@ A cargo subcommand for reviewing the source code of crates.io dependencies.
 cargo install cargo-review-deps
 ```
 
-## Usage:
+## Usage
 
-To see the `diff -r` of packages, use
+### update-diff
+
+To see what exactly changes if you run `cargo-update`, use
+
+```
+$ cargo review-deps update-diff -- --package foo
+```
+
+This will run (without actually updating the lockfile) `cargo update --package foo`
+and show `diff --color -r` of all added/removed/updated dependencies.
+
+If you want to use a custom diff tool or need to do a more thorough
+investigation, use `--destination` option to checkout sources of dependencies
+locally.
+
+### diff
+
+To quickly see the `diff -r` of two package versions, use
 
 ```
 $ cargo review-deps diff rand:0.6.0 rand:0.6.1
 ```
 
-If you want to use a custom diff tool or need to do a more thorough
-investigation, use `--destination` option to checkout sources of dependencies
-locally.
+Similarly to `update-diff`, you can use `--destination` option for customized
+diffing.
 
 ```
 $ cargo review-deps diff rand:0.6.0 rand:0.6.1 --destinations diff
@@ -31,13 +47,17 @@ Note that `cargo-review-deps` does not rely on version control information: it
 uses exactly that version of source code, that will be used by Cargo to build
 your project.
 
-## Future plans:
 
-`cargo review-deps current -d my-deps` to dump the sources of all dependencies
-to `my-deps` directory.
+### current
 
-`cargo review-deps diff-update -d diff -- -p rand --precise 0.6.1` to get the
-diff of *all* dependencies changed during `cargo update`.
+To see the sources of all transitive dependencies, use
+
+```
+$ cargo review-deps current --destination dir/to/dump/sources/to
+```
+
+This will download sources of all of the dependencies to the specified
+directory.
 
 ## Similar projects:
 
