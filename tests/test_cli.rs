@@ -127,7 +127,7 @@ fn update_diff_dumps_changed_crates() -> std::io::Result<()> {
         .with_args(&[&dest.as_path()])
         .with_args(&["--", "--package", "thread_local", "--precise", "0.3.4"])
         .stderr()
-        .contains("Skipping package `test-pkg`")
+        .contains("thread_local v0.3.3 -> v0.3.4")
         .unwrap();
     assert_eq!(
         lockfile,
@@ -149,7 +149,8 @@ fn target_dir() -> PathBuf {
                 path.pop();
             }
             path
-        }).unwrap()
+        })
+        .unwrap()
 }
 
 fn cargo_review_deps_exe() -> PathBuf {

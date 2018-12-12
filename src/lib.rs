@@ -6,8 +6,8 @@ extern crate semver;
 extern crate tempdir;
 
 use std::{
-    fmt, fs,
     ffi::OsString,
+    fmt, fs,
     path::{Path, PathBuf},
     process::{Command, Stdio},
     str::FromStr,
@@ -98,7 +98,8 @@ impl Current {
     pub fn run(self) -> Result<()> {
         let metadata = Metadata {
             manifest_path: None,
-        }.run()?;
+        }
+        .run()?;
 
         fs::create_dir_all(&self.dest)?;
         for pkg in metadata.packages.iter() {
@@ -127,7 +128,106 @@ pub struct UpdateDiff {
 
 impl UpdateDiff {
     pub fn run(self) -> Result<()> {
+        let before_metadata = Metadata {
+            manifest_path: None,
+        }
+        .run()?;
+        let workspace_root = Path::new(&before_metadata.workspace_root);
+        let lockfile = workspace_root.join("Cargo.lock");
+        let mut lockfile_guard = LockfileGuard::new(lockfile)?;
+
+        let status = Command::new("cargo")
+            .arg("update")
+            .args(&self.args)
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .status()?;
+
+        if !status.success() {
+            bail!("running cargo update failed");
+        }
+        let after_metadata = Metadata {
+            manifest_path: None,
+        }
+        .run()?;
+
+        for pdiff in metadata_diff(&before_metadata, &after_metadata) {
+            pdiff.dump_to(&self.dest)?;
+        }
+
+        lockfile_guard.restore_lockfile()?;
         Ok(())
+    }
+}
+
+#[derive(Debug)]
+struct PackageDiff {
+    name: String,
+    before: Option<PathBuf>,
+    after: Option<PathBuf>,
+}
+
+fn metadata_diff(
+    before: &cargo_metadata::Metadata,
+    after: &cargo_metadata::Metadata,
+) -> Vec<PackageDiff> {
+    Vec::new()
+}
+
+impl PackageDiff {
+    fn dump_to(&self, dest: &Path) -> Result<()> {
+        if let Some(src) = self.before.as_ref() {
+            let dst = dest.join("before").join(&self.name);
+            fs::create_dir_all(&dst)?;
+            copy_dir(&src, &dst)?;
+        }
+        if let Some(src) = self.after.as_ref() {
+            let dst = dest.join("after").join(&self.name);
+            fs::create_dir_all(&dst)?;
+            copy_dir(&src, &dst)?;
+        }
+        Ok(())
+    }
+}
+
+/// We run real `cargo update` which writes lockfile. This struct makes sure (in
+/// Drop), that we restore it propertly afterwards.
+#[derive(Debug)]
+struct LockfileGuard {
+    lockfile_path: PathBuf,
+    lockfile_copy_path: PathBuf,
+    lockfile_contents: String,
+    restored: bool,
+}
+
+impl LockfileGuard {
+    fn new(path: impl Into<PathBuf>) -> Result<LockfileGuard> {
+        let lockfile_path = path.into();
+        let lockfile_copy_path = lockfile_path.with_extension(".lock.back");
+        let lockfile_contents = fs::read_to_string(&lockfile_path)?;
+        fs::write(&lockfile_copy_path, &lockfile_contents)?;
+        let res = LockfileGuard {
+            lockfile_path,
+            lockfile_copy_path,
+            lockfile_contents,
+            restored: false,
+        };
+        Ok(res)
+    }
+
+    fn restore_lockfile(&mut self) -> Result<()> {
+        self.restored = true;
+        fs::write(&self.lockfile_path, &self.lockfile_contents)?;
+        fs::remove_file(self.lockfile_copy_path.as_path())?;
+        Ok(())
+    }
+}
+
+impl Drop for LockfileGuard {
+    fn drop(&mut self) {
+        if !self.restored {
+            let _ = self.restore_lockfile();
+        }
     }
 }
 
@@ -140,7 +240,8 @@ impl<'a> Metadata<'a> {
         let metadata = cargo_metadata::metadata_deps(
             self.manifest_path,
             true, // include dependencies
-        ).map_err(|err| format_err!("cargo metadata failed: {}", err))?; // error_chain is not sync :-(
+        )
+        .map_err(|err| format_err!("cargo metadata failed: {}", err))?; // error_chain is not sync :-(
         Ok(metadata)
     }
 }
@@ -160,7 +261,8 @@ fn fetch(pkg_id: &PackageId) -> Result<PathBuf> {
     fs::write(&temp_manifest, format_cargo_toml(pkg_id))?;
     let metadata = Metadata {
         manifest_path: Some(temp_manifest.as_path()),
-    }.run()?;
+    }
+    .run()?;
 
     let package = metadata
         .packages
@@ -178,7 +280,8 @@ fn pkg_dir(pkg: &cargo_metadata::Package) -> Result<PathBuf> {
                 "unexpected error: bad manifest path {:?}",
                 pkg.manifest_path
             )
-        })?.to_path_buf();
+        })?
+        .to_path_buf();
     Ok(res)
 }
 

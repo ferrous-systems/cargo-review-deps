@@ -1,12 +1,9 @@
 extern crate cargo_review_deps;
 extern crate clap;
 
-use std::{
-    path::PathBuf,
-    ffi::OsStr,
-};
+use std::{ffi::OsStr, path::PathBuf};
 
-use cargo_review_deps::{Current, Diff, UpdateDiff, PackageId, Result};
+use cargo_review_deps::{Current, Diff, PackageId, Result, UpdateDiff};
 use clap::{App, AppSettings, Arg, ArgMatches, SubCommand};
 
 fn main() {
@@ -120,7 +117,8 @@ fn exec_diff(matches: &ArgMatches) -> Result<()> {
         first,
         second,
         dest,
-    }.run()
+    }
+    .run()
 }
 
 fn exec_current(matches: &ArgMatches) -> Result<()> {
@@ -130,7 +128,8 @@ fn exec_current(matches: &ArgMatches) -> Result<()> {
 
 fn exec_update_diff(matches: &ArgMatches) -> Result<()> {
     let dest = matches.value_of("destination").unwrap().into();
-    let args = matches.values_of_os("args")
+    let args = matches
+        .values_of_os("args")
         .unwrap_or_default()
         .map(OsStr::to_owned)
         .collect();
